@@ -97,6 +97,14 @@ class Chopper:
 
         return head_height
 
+    def guess_top_start(self, base_col):
+        height, _ = self.input_image.size
+
+        for topdent in range(height - self.segment_len):
+            head_height = self.calculate_head_height(base_col, topdent)
+            if head_height is not None:
+                return head_height
+
     def save_heads(self, head_width, head_height, fname_prefix="output-"):
         _, height = self.input_image.size
         for head_x in range(self.heads_wide):
@@ -125,8 +133,10 @@ def main():
     args = getargs()
     c = Chopper(args.input_file, 5, 9)
     head_width = c.guess_left_start(130)
-    head_height = c.calculate_head_height(130, 3)
+    head_height = c.guess_top_start(130)
     c.save_heads(head_width, head_height)
+
+    # TODO: remove blanks
 
 
 if __name__ == "__main__":

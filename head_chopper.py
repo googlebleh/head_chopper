@@ -71,6 +71,14 @@ class Chopper:
 
         return head_width
 
+    def guess_left_start(self, base_row):
+        width, _ = self.input_image.size
+
+        for indent in range(width - self.segment_len):
+            head_width = self.calculate_head_width(base_row, indent)
+            if head_width is not None:
+                return head_width
+
     def save_heads(self, head_width, fname_prefix="output-"):
         _, height = self.input_image.size
         for head_i in range(self.heads_wide):
@@ -96,7 +104,7 @@ def getargs():
 def main():
     args = getargs()
     c = Chopper(args.input_file, 5, 9)
-    head_width = c.calculate_head_width(130, 30)
+    head_width = c.guess_left_start(130)
     c.save_heads(head_width)
 
 

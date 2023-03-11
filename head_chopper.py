@@ -1,18 +1,10 @@
 #!/usr/bin/env python3
 
-import pprint
+import argparse
+import math
 
 from PIL import Image
-im = Image.open("11_0_1_face.png")
 
-pixels = list(im.getdata())
-width, height = im.size
-# pixels = [pixels[i * width:(i + 1) * width] for i in xrange(height)]
-
-def getpixel(row, col):
-    assert(0 <= row < height)
-    assert(0 <= col < width)
-    return pixels[width * row + col]
 
 def row_difference(a, b):
     assert(len(a) == len(b))
@@ -23,6 +15,7 @@ def row_difference(a, b):
         r.append((r1-r2, g1-g2, b1-b2, a1-a2))
     return r
 
+
 def almost_zero(pixel):
     epsilon = 50
     r, g, b, a = pixel
@@ -31,8 +24,10 @@ def almost_zero(pixel):
             and abs(b) < epsilon
             and abs(a) < epsilon)
 
+
 def almost_eq(a, b):
     return all(almost_zero(pixel_diff) for pixel_diff in row_difference(a, b))
+
 
 def all_almost_eq(segments):
     assert(len(segments) > 0)
@@ -42,27 +37,68 @@ def all_almost_eq(segments):
             return False
     return True
 
-base_row = 130
-left_start = 30 # - 130
-nheads = 5
 
-calculated_head_width = None
-for guess in range(190, width // nheads + 3):
-    segments = []
-    for head_i in range(5):
-        segments.append([getpixel(base_row, left_start+(head_i*guess)+j) for j in range(100)])
+class Chopper:
+    segment_len = 100
+    def __init__(self, input_fpath, heads_wide, heads_tall):
+        self.input_image = Image.open(input_fpath)
+        self.input_rgba = self.input_image.getdata()
 
-    if all_almost_eq(segments):
-        print(f"guessed skip = {guess}")
-        calculated_head_width = guess
+        self.heads_wide = heads_wide
+        self.heads_tall = heads_tall
 
-for head_i in range(nheads):
-    new_image = []
-    for row in range(height):
-        for col in range(calculated_head_width):
-            new_image.append(getpixel(row, head_i*calculated_head_width + col))
+    def getpixel(self, row, col):
+        width, height = self.input_image.size
+        assert(0 <= row < height)
+        assert(0 <= col < width)
+        return self.input_rgba[width * row + col]
+
+    def calculate_head_width(self, base_row, left_start):
+        width, _ = self.input_image.size
+        head_width = None
+
+        # guess == 0 is vacuously true
+        for guess in range(1, math.ceil(width / self.heads_wide)):
+            segments = []
+            for head_i in range(self.heads_wide):
+                segment_start_col = left_start + (head_i * guess)
+                segment = [self.getpixel(base_row, segment_start_col + j) for j in range(self.segment_len)]
+                segments.append(segment)
+
+            if all_almost_eq(segments):
+                print(f"guessed skip = {guess}")
+                head_width = guess
+
+        return head_width
+
+    def save_heads(self, head_width, fname_prefix="output-"):
+        _, height = self.input_image.size
+        for head_i in range(self.heads_wide):
+            new_image = []
+            for row in range(height):
+                for head_col in range(head_width):
+                    col = head_i * head_width + head_col
+                    p = self.getpixel(row, col)
+                    new_image.append(p)
+
+            image = Image.new("RGBA", (head_width, height))
+            image.putdata(new_image)
+            image.save(f"{fname_prefix}{head_i}.png")
 
 
-    image = Image.new("RGBA", (calculated_head_width, height))
-    image.putdata(new_image)
-    image.save(f"output-{head_i}.png")
+def getargs():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("-i", "--input-file", help="input sprite file")
+    ap.add_argument("-o", "--output-file", help="output sprite file prefix")
+    return ap.parse_args()
+
+
+def main():
+    args = getargs()
+    c = Chopper(args.input_file, 5, 9)
+    head_width = c.calculate_head_width(130, 30)
+    c.save_heads(head_width)
+
+
+if __name__ == "__main__":
+    main()

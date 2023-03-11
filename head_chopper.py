@@ -97,19 +97,21 @@ class Chopper:
 
         return head_height
 
-    def save_heads(self, head_width, fname_prefix="output-"):
+    def save_heads(self, head_width, head_height, fname_prefix="output-"):
         _, height = self.input_image.size
-        for head_i in range(self.heads_wide):
-            new_image = []
-            for row in range(height):
-                for head_col in range(head_width):
-                    col = head_i * head_width + head_col
-                    p = self.getpixel(row, col)
-                    new_image.append(p)
+        for head_x in range(self.heads_wide):
+            for head_y in range(self.heads_tall):
+                new_image = []
+                for head_row in range(head_height):
+                    for head_col in range(head_width):
+                        row = head_y * head_height + head_row
+                        col = head_x * head_width + head_col
+                        p = self.getpixel(row, col)
+                        new_image.append(p)
 
-            image = Image.new("RGBA", (head_width, height))
-            image.putdata(new_image)
-            image.save(f"{fname_prefix}{head_i}.png")
+                image = Image.new("RGBA", (head_width, head_height))
+                image.putdata(new_image)
+                image.save(f"{fname_prefix}{head_y:02}.{head_x:02}.png")
 
 
 def getargs():
@@ -124,7 +126,7 @@ def main():
     c = Chopper(args.input_file, 5, 9)
     head_width = c.guess_left_start(130)
     head_height = c.calculate_head_height(130, 3)
-    c.save_heads(head_width)
+    c.save_heads(head_width, head_height)
 
 
 if __name__ == "__main__":

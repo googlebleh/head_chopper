@@ -39,7 +39,7 @@ def all_almost_eq(segments):
 
 
 class Chopper:
-    segment_len = 100
+    segment_len = 60
     def __init__(self, input_fpath, heads_wide, heads_tall):
         self.input_image = Image.open(input_fpath)
         self.input_rgba = self.input_image.getdata()
@@ -62,7 +62,7 @@ class Chopper:
             segments = []
             for head_i in range(self.heads_wide):
                 segment_start_col = left_start + (head_i * guess)
-                segment = [self.getpixel(base_row, segment_start_col + j) for j in range(self.segment_len)]
+                segment = [self.getpixel(base_row, segment_start_col + x) for x in range(self.segment_len)]
                 segments.append(segment)
 
             if all_almost_eq(segments):
@@ -78,6 +78,24 @@ class Chopper:
             head_width = self.calculate_head_width(base_row, indent)
             if head_width is not None:
                 return head_width
+
+    def calculate_head_height(self, base_col, top_start):
+        _, height = self.input_image.size
+        head_height = None
+
+        # guess == 0 is vacuously true
+        for guess in range(1, math.ceil(height / self.heads_tall)):
+            segments = []
+            for head_i in range(self.heads_tall):
+                segment_start_row = top_start + (head_i * guess)
+                segment = [self.getpixel(segment_start_row + y, base_col) for y in range(self.segment_len)]
+                segments.append(segment)
+
+            if all_almost_eq(segments):
+                print(f"guessed vertical skip = {guess}")
+                head_height = guess
+
+        return head_height
 
     def save_heads(self, head_width, fname_prefix="output-"):
         _, height = self.input_image.size
@@ -105,6 +123,7 @@ def main():
     args = getargs()
     c = Chopper(args.input_file, 5, 9)
     head_width = c.guess_left_start(130)
+    head_height = c.calculate_head_height(130, 3)
     c.save_heads(head_width)
 
 
